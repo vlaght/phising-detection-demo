@@ -1,0 +1,19 @@
+[project]
+name = "phishing-detector"
+version = "0.1.0"
+description = "Model demo for study project"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "joblib>=1.5.1",
+    "scikit-learn==1.7.0",
+    "streamlit>=1.47.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "matplotlib>=3.10.3",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.4",
+]
