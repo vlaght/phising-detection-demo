@@ -1,20 +1,65 @@
-from typing import Any
-# this one is the module for quick model showpages
-# it's invocations look like a bad-old spaghetti,
-# but for my purpose that will do
-import streamlit as st
-# matplotlib for probability distribution visualization
-import matplotlib.pyplot as plt
-
-# for model loading
-import joblib
-
-# we still need that one for data serialization
+from typing import Any, Literal
 
 # for inputs randomization
 import random
 
-from common import predict_phishing
+# for model loading
+import joblib
+
+# matplotlib for probability distribution visualization
+import matplotlib.pyplot as plt
+
+# this one is the module for quick model showpages
+# it's invocations look like a bad-old spaghetti,
+# but for my purpose that will do
+import streamlit as st
+
+# we still need that one for data serialization
+import pandas as pd
+
+# for type hinting
+from sklearn.ensemble import RandomForestClassifier
+
+# for the input tooltip
+PHISH_HINTS = [
+    'wp', 'login', 'includes', 'admin', 'content',
+    'site', 'images', 'js', 'alibaba', 'css', 'myaccount',
+    'dropbox', 'themes', 'plugins', 'signin', 'view',
+]
+
+# function to feed the input data to the model and
+# get predicted class and classes probabilities
+def predict_phishing(model: RandomForestClassifier, features: dict):
+    """
+    Predict if a website is phishing based on features
+
+    Args:
+        model: Trained classifier model
+        features: Dictionary with feature values
+
+    Returns:
+        tuple: (prediction, prediction_probabilities)
+    """
+    # Convert features to DataFrame
+    df = pd.DataFrame([features])
+
+    # Ensure correct data types
+    df["google_index"] = df["google_index"].astype(bool)
+    df["page_rank"] = df["page_rank"].astype("int64")
+    df["nb_hyperlinks"] = df["nb_hyperlinks"].astype("int64")
+    df["web_traffic"] = df["web_traffic"].astype("int64")
+    df["nb_www"] = df["nb_www"].astype("int64")
+    df["domain_age"] = df["domain_age"].astype("int64")
+    df["longest_word_path"] = df["longest_word_path"].astype("int64")
+    df["ratio_extHyperlinks"] = df["ratio_extHyperlinks"].astype("float64")
+    df["ratio_intHyperlinks"] = df["ratio_intHyperlinks"].astype("float64")
+    df["phish_hints"] = df["phish_hints"].astype("int64")
+
+    # Make prediction
+    prediction: Literal[0, 1] = model.predict(df)[0]
+    prediction_proba = model.predict_proba(df)[0]
+
+    return prediction, prediction_proba
 
 
 # Set page config
@@ -27,14 +72,13 @@ st.set_page_config(
 
 # caching the model to avoid it's every page re-render
 @st.cache_resource
-def load_model():
+def load_model() -> RandomForestClassifier | None:
     try:
         model = joblib.load("phishing_classifier_light.joblib")
-        return model
     except Exception as exc:
         st.error(f"I miserably failed: {exc}")
         return None
-
+    return model
 
 # Initial state of form inputs
 def initialize_session_state():
@@ -238,7 +282,7 @@ def main() -> None:
                     min_value=0,
                     value=st.session_state.phish_hints,
                     step=1,
-                    help="Number of matches with the following list: ['wp', 'login', 'includes', 'admin', 'content', 'site', 'images', 'js', 'alibaba', 'css', 'myaccount', 'dropbox', 'themes', 'plugins', 'signin', 'view']",
+                    help=f"Number of matches with the following list: {PHISH_HINTS}",
                 )
 
             # buttons; to have them under each of previous columns
@@ -290,31 +334,30 @@ def main() -> None:
                 # make prediction
                 try:
                     prediction, prediction_proba = predict_phishing(model, inputs)
-                    # display results in the right column
-                    with right_column:
-                        st.header("Prediction Result")
-
-                        if prediction == 1:
-                            st.error("**PHISHING**")
-                        else:
-                            st.success("**LEGITIMATE**")
-
-                        # show probability distribution
-                        st.subheader("Probability distribution")
-                        fig, ax = plt.subplots()
-                        ax.pie(
-                            prediction_proba,
-                            labels=["Legitimate", "Phishing"],
-                            autopct="%1.1f%%",
-                        )
-                        st.pyplot(fig)
-
-                        # show input summary
-                        st.subheader("Input Summary")
-                        st.json(inputs)
-
                 except Exception as exc:
                     st.error(f"Error making prediction: {exc}")
+                # display results in the right column
+                with right_column:
+                    st.header("Prediction Result")
+
+                    if prediction == 1:
+                        st.error("**PHISHING**")
+                    else:
+                        st.success("**LEGITIMATE**")
+
+                    # show probability distribution
+                    st.subheader("Probability distribution")
+                    fig, ax = plt.subplots()
+                    ax.pie(
+                        prediction_proba,
+                        labels=["Legitimate", "Phishing"],
+                        autopct="%1.1f%%",
+                    )
+                    st.pyplot(fig)
+
+                    # show input summary
+                    st.subheader("Input Summary")
+                    st.json(inputs)
 
     with right_column:
         if not submitted:
