@@ -96,10 +96,10 @@ def initialize_session_state():
         st.session_state.domain_age = 0
     if "longest_word_path" not in st.session_state:
         st.session_state.longest_word_path = 0
-    if "ratio_extHyperlinks" not in st.session_state:
-        st.session_state.ratio_extHyperlinks = 0.0
     if "ratio_intHyperlinks" not in st.session_state:
         st.session_state.ratio_intHyperlinks = 0.0
+    if "ratio_extHyperlinks" not in st.session_state:
+        st.session_state.ratio_extHyperlinks = 0.0
     if "phish_hints" not in st.session_state:
         st.session_state.phish_hints = 0
 
@@ -118,8 +118,8 @@ def randomize_inputs():
     st.session_state.nb_www = random.randint(0, 10)
     st.session_state.domain_age = random.randint(0, 10000)
     st.session_state.longest_word_path = random.randint(0, 100)
-    st.session_state.ratio_extHyperlinks = round(random.uniform(0.0, 1.0), 3)
     st.session_state.ratio_intHyperlinks = round(random.uniform(0.0, 1.0), 3)
+    st.session_state.ratio_extHyperlinks = 1 - st.session_state.ratio_intHyperlinks
     st.session_state.phish_hints = random.randint(0, 50)
 
 
@@ -153,10 +153,6 @@ def validate_inputs(inputs: dict[str, Any]) -> list[str]:
     # validate longest_word_path, non-negative
     if inputs["longest_word_path"] < 0:
         errors.append("Longest word path must be non-negative")
-
-    # validate ratio_extHyperlinks (should be between 0 and 1)
-    if not (0.0 <= inputs["ratio_extHyperlinks"] <= 1.0):
-        errors.append("Ratio of external hyperlinks must be between 0.0 and 1.0")
 
     # validate ratio_intHyperlinks (should be between 0 and 1)
     if not (0.0 <= inputs["ratio_intHyperlinks"] <= 1.0):
@@ -240,13 +236,6 @@ def main() -> None:
                     help="Number of 'www' occurrences in URL",
                 )
 
-                domain_age = st.number_input(
-                    "Domain age (days)",
-                    min_value=0,
-                    value=st.session_state.domain_age,
-                    step=1,
-                    help="Age of the domain in days",
-                )
             # and the other part is in the right
             with form_right_column:
                 longest_word_path = st.number_input(
@@ -255,16 +244,6 @@ def main() -> None:
                     value=st.session_state.longest_word_path,
                     step=1,
                     help="Length of the longest word in link path part",
-                )
-
-                ratio_extHyperlinks = st.number_input(
-                    "Ratio of external hyperlinks",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=st.session_state.ratio_extHyperlinks,
-                    step=0.001,
-                    format="%.3f",
-                    help="Ratio of external hyperlinks (0.0 - 1.0)",
                 )
 
                 ratio_intHyperlinks = st.number_input(
@@ -284,7 +263,13 @@ def main() -> None:
                     step=1,
                     help=f"Number of matches with the following list: {PHISH_HINTS}",
                 )
-
+                domain_age = st.number_input(
+                    "Domain age (days)",
+                    min_value=0,
+                    value=st.session_state.domain_age,
+                    step=1,
+                    help="Age of the domain in days",
+                )
             # buttons; to have them under each of previous columns
             # I have to split the current container in 2-column layout again
             left_button_column, right_button_column = st.columns(2)
@@ -310,6 +295,7 @@ def main() -> None:
         # handling predict button press
         if submitted:
             # collecting inputs
+            # may seem weird, but keys order matters
             inputs = {
                 "google_index": google_index,
                 "page_rank": page_rank,
@@ -318,7 +304,7 @@ def main() -> None:
                 "nb_www": nb_www,
                 "domain_age": domain_age,
                 "longest_word_path": longest_word_path,
-                "ratio_extHyperlinks": ratio_extHyperlinks,
+                "ratio_extHyperlinks": 1 - ratio_intHyperlinks,
                 "ratio_intHyperlinks": ratio_intHyperlinks,
                 "phish_hints": phish_hints,
             }
@@ -370,7 +356,7 @@ def main() -> None:
             - **Number of WWW tokens**: URL-based feature; Occurrences of 'www' in URL
             - **Domain age (days)**: External-based feature; How old is the domain in days?
             - **Longest word in URL path component**: URL-based feature; Length of longest word in URL path
-            - **Ratio of external hyperlinks**: Content-based feature; Ratio of external links to the total number of links
+            - **Ratio of external hyperlinks**: Content-based feature; Ratio of external links to the total number of links, calculated as `1 - ratio_intHyperlinks`
             - **Ratio of internal hyperlinks**: Content-based feature; Ratio of internal links to the total number of links
             - **Phishing hints**: URL-based feature; Suspicious keyword count
             """)
