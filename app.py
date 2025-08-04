@@ -22,10 +22,24 @@ from sklearn.ensemble import RandomForestClassifier
 
 # for the input tooltip
 PHISH_HINTS = [
-    'wp', 'login', 'includes', 'admin', 'content',
-    'site', 'images', 'js', 'alibaba', 'css', 'myaccount',
-    'dropbox', 'themes', 'plugins', 'signin', 'view',
+    "wp",
+    "login",
+    "includes",
+    "admin",
+    "content",
+    "site",
+    "images",
+    "js",
+    "alibaba",
+    "css",
+    "myaccount",
+    "dropbox",
+    "themes",
+    "plugins",
+    "signin",
+    "view",
 ]
+
 
 # function to feed the input data to the model and
 # get predicted class and classes probabilities
@@ -79,6 +93,7 @@ def load_model() -> RandomForestClassifier | None:
         st.error(f"I miserably failed: {exc}")
         return None
     return model
+
 
 # Initial state of form inputs
 def initialize_session_state():
@@ -251,8 +266,8 @@ def main() -> None:
                     min_value=0.0,
                     max_value=1.0,
                     value=st.session_state.ratio_intHyperlinks,
-                    step=0.001,
-                    format="%.3f",
+                    step=0.0001,
+                    format="%.4f",
                     help="Ratio of internal hyperlinks (0.0 - 1.0)",
                 )
 
